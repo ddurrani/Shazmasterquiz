@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-g">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShazMaster the Ultimate Quiz</title>
+    <!-- 1. Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 2. Load Google Font (Inter) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* 3. Define base styles for the gameshow look */
+        body {
+            font-family: 'Inter', sans-serif;
+            /* New high-energy game show gradient: Deep Blue to Pink/Magenta */
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #831843 100%);
+            background-attachment: fixed;
+        }
+        /* Custom class for the gold italic text (made brighter) */
+        .gold-italic {
+            color: #fcd34d; /* Tailwind 'yellow-300' */
+            font-style: italic;
+        }
+
+        /* A simple loading spinner */
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid #f97316; /* Orange for spotlight effect */
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="text-white min-h-screen flex items-center justify-center p-4">
+
+    <!-- Main App Container - Now darker and more substantial -->
+    <div id="app-container" class="w-full max-w-3xl mx-auto bg-purple-900/50 backdrop-blur-md rounded-3xl shadow-2xl shadow-fuchsia-800/80 p-6 md:p-12 transition-all duration-300 border-4 border-fuchsia-600">
+
+        <!-- Screen 1: Category Selection (Default) -->
+        <div id="category-screen">
+            <!-- Title: Bright Gold/Yellow for prominence -->
+            <h1 class="text-4xl md:text-5xl font-black text-center mb-2 text-yellow-400 drop-shadow-lg">ShazMaster</h1>
+            <!-- Subtitle: High contrast text -->
+            <h2 class="text-2xl md:text-3xl font-extrabold text-center mb-8 text-purple-300">The Ultimate Quiz</h2>
+            <p class="text-center text-xl mb-8 font-semibold text-gray-200">Select your category to enter the spotlight:</p>
+            <!-- Category Grid: Now uses sm:grid-cols-3 to ensure a perfect 4x3 layout from tablet size up -->
+            <div id="category-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-5">
+                <!-- Categories -->
+                <button data-category="Sports" class="category-button">Sports</button>
+                <button data-category="Movies" class="category-button">Movies</button>
+                <button data-category="Technology" class="category-button">Technology</button>
+                <button data-category="History" class="category-button">History</button>
+                <button data-category="Science" class="category-button">Science</button>
+                <button data-category="Music" class="category-button">Music</button>
+                <button data-category="Geography" class="category-button">Geography</button>
+                <button data-category="Literature" class="category-button">Literature</button>
+                <button data-category="Art" class="category-button">Art</button>
+                <button data-category="General Knowledge" class="category-button">General Knowledge</button>
+                <button data-category="Food & Drink" class="category-button">Food & Drink</button>
+                <button data-category="Nature" class="category-button">Nature</button>
+            </div>
+        </div>
+
+        <!-- Screen 2: Loading Screen -->
+        <div id="loading-screen" class="hidden text-center p-12">
+            <div class="loader mx-auto mb-6"></div>
+            <!-- Loading text is now bolder and brighter -->
+            <h2 class="text-3xl font-bold text-yellow-400 mb-2">Generating Your Quiz...</h2>
+            <p class="text-xl">Preparing 10 high-stakes questions on <span id="loading-category" class="font-bold"></span>.</p>
+        </div>
+
+        <!-- Screen 3: Quiz Screen -->
+        <div id="quiz-screen" class="hidden">
+            <div class="flex justify-between items-center mb-4 text-xl font-bold">
+                <span id="question-counter" class="text-xl font-bold text-yellow-300">Question 1 of 10</span>
+                <span id="current-score" class="text-xl font-bold text-green-400">Score: 0</span>
+            </div>
+            <!-- Question Text - Larger and Bolder -->
+            <h2 id="question-text" class="text-3xl md:text-4xl font-extrabold mb-8 min-h-[8rem] flex items-center justify-center text-center text-white p-4 border-b-2 border-purple-500">
+                Loading question...
+            </h2>
+            <!-- Options Container -->
+            <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Option buttons will be dynamically inserted here -->
+            </div>
+            <!-- Feedback for answer -->
+            <p id="answer-feedback" class="text-center text-xl mt-6 min-h-[1.5rem] font-semibold"></p>
+        </div>
+
+        <!-- Screen 4: Results Screen -->
+        <div id="results-screen" class="hidden text-center">
+            <!-- Results Title - High Impact -->
+            <h2 class="text-4xl font-black mb-4 text-yellow-400">FINAL SCORE</h2>
+            <!-- Score Percentage - Massive Text -->
+            <h1 id="score-percentage" class="text-8xl md:text-9xl font-black text-white mb-4 drop-shadow-lg">
+                0%
+            </h1>
+            <!-- Score Feedback - Bolder -->
+            <p id="score-feedback" class="text-4xl font-extrabold mb-10">
+                <!-- "Very Poor", "Good One", or "Excellent!" -->
+            </p>
+            <!-- Restart Button - Striking Gold/Yellow -->
+            <button id="restart-button" class="w-full max-w-sm mx-auto p-5 bg-yellow-500 hover:bg-yellow-400 text-gray-900 rounded-xl text-2xl font-black transition-all duration-200 transform hover:scale-105 shadow-2xl shadow-yellow-700/50 uppercase">
+                Start Again
+            </button>
+        </div>
+
+        <!-- Screen 5: Error Screen (New) -->
+        <div id="error-screen" class="hidden text-center p-12">
+            <h2 class="text-3xl font-bold text-red-400 mb-4">API Request Failed</h2>
+            <p id="error-message" class="text-xl text-gray-200 mb-8">
+                The game could not retrieve questions from the server. This often happens if the hosting environment (like CodePen/JSFiddle) blocks the API connection.
+                Please ensure you are running the game in a properly configured environment.
+            </p>
+            <button id="error-restart-button" class="w-full max-w-sm mx-auto p-5 bg-yellow-500 hover:bg-yellow-400 text-gray-900 rounded-xl text-2xl font-black transition-all duration-200 transform hover:scale-105 shadow-2xl shadow-yellow-700/50 uppercase">
+                Back to Categories
+            </button>
+        </div>
+
+    </div>
+
+    <script type="module">
+        // --- STATE AND VARIABLES ---
+
+        // API Key (remains empty, as per instructions)
+        const apiKey = "";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+        // Global State
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+
+        // DOM Element References
+        const categoryScreen = document.getElementById('category-screen');
+        const loadingScreen = document.getElementById('loading-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultsScreen = document.getElementById('results-screen');
+        // New error screen elements
+        const errorScreen = document.getElementById('error-screen');
+        const errorMessage = document.getElementById('error-message');
+        const errorRestartButton = document.getElementById('error-restart-button');
+        
+        const categoryGrid = document.getElementById('category-grid');
+        const loadingCategory = document.getElementById('loading-category');
+        
+        const questionCounter = document.getElementById('question-counter');
+        const currentScore = document.getElementById('current-score');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const answerFeedback = document.getElementById('answer-feedback');
+        
+        const scorePercentage = document.getElementById('score-percentage');
+        const scoreFeedback = document.getElementById('score-feedback');
+        const restartButton = document.getElementById('restart-button');
+
+        // --- INITIALIZATION ---
+
+        // Apply shared button styles to initial categories (Gameshow Style)
+        document.querySelectorAll('.category-button').forEach(button => {
+            // Updated padding to be consistent (p-5) across all screens for better vertical fit
+            button.classList.add(
+                'w-full', 'p-5', // Uniform padding for equal vertical size
+                'bg-fuchsia-600', 'hover:bg-yellow-500', // Deep Magenta base, Gold hover
+                'hover:text-gray-900', // Text contrast on hover
+                'text-white', 'text-2xl', 
+                'rounded-xl', 'font-black', 'uppercase', 
+                'transition-all', 'duration-200', 'transform', 
+                'hover:scale-105', 'shadow-2xl', 'shadow-fuchsia-800/50', 'text-center'
+            );
+        });
+
+        // --- EVENT LISTENERS ---
+
+        // Listen for clicks on the category grid
+        categoryGrid.addEventListener('click', (e) => {
+            if (e.target.matches('.category-button')) {
+                const category = e.target.dataset.category;
+                startQuiz(category);
+            }
+        });
+
+        // Listen for clicks on the option buttons
+        optionsContainer.addEventListener('click', (e) => {
+            if (e.target.matches('.option-button')) {
+                // Disable all buttons to prevent double-clicking
+                document.querySelectorAll('.option-button').forEach(btn => btn.disabled = true);
+                checkAnswer(e.target);
+            }
+        });
+
+        // Listen for click on the restart button
+        restartButton.addEventListener('click', restartQuiz);
+        
+        // Listen for click on the error restart button
+        errorRestartButton.addEventListener('click', restartQuiz);
+
+
+        // --- STATE MANAGEMENT ---
+
+        /**
+         * Hides all screens and shows the one with the specified ID
+         * @param {string} screenId - The ID of the screen to show ('category-screen', 'loading-screen', etc.)
+         */
+        function showScreen(screenId) {
+            // Added errorScreen to the list of screens to hide
+            [categoryScreen, loadingScreen, quizScreen, resultsScreen, errorScreen].forEach(screen => {
+                screen.classList.add('hidden');
+            });
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+
+        // --- CORE API LOGIC ---
+
+        /**
+         * Starts the quiz by fetching questions from the API
+         * @param {string} category - The selected quiz category
+         */
+        async function startQuiz(category) {
+            showScreen('loading-screen');
+            loadingCategory.textContent = category;
+            
+            // Define the structure we want the API to return
+            const responseSchema = {
+                type: "ARRAY",
+                items: {
+                    type: "OBJECT",
+                    properties: {
+                        "question": { "type": "STRING" },
+                        "options": {
+                            "type": "ARRAY",
+                            "items": { "type": "STRING" },
+                            "minItems": 4,
+                            "maxItems": 4
+                        },
+                        "correctAnswer": { "type": "STRING" }
+                    },
+                    required: ["question", "options", "correctAnswer"]
+                }
+            };
+            
+            const systemPrompt = "You are 'ShazMaster', a witty and challenging quiz master. Generate 10 multiple-choice questions for the given category. Each question must have exactly 4 options, and one of those options must be the correct answer. Ensure the 'correctAnswer' string is an exact match to one of the strings in the 'options' array.";
+            const userQuery = `Category: ${category}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: responseSchema,
+                }
+            };
+
+            try {
+                const fetchedQuestions = await fetchWithBackoff(apiUrl, payload);
+                if (fetchedQuestions && fetchedQuestions.length > 0) {
+                    questions = fetchedQuestions;
+                    currentQuestionIndex = 0;
+                    score = 0;
+                    displayQuestion();
+                    showScreen('quiz-screen');
+                } else {
+                    // Handle case where API returns empty or invalid data
+                    console.error("Failed to fetch valid questions (empty response).");
+                    errorMessage.textContent = `The API returned an empty or invalid quiz. Please try a different category or wait a moment. (Code: Empty Response)`;
+                    showScreen('error-screen');
+                }
+            } catch (error) {
+                // Show the new error screen on failure
+                console.error("Error fetching questions:", error);
+                errorMessage.textContent = `Error: ${error.message}. This is likely a network or hosting security issue. Please try running the game on a standard web server (like http://localhost:8000).`;
+                showScreen('error-screen');
+            }
+        }
+
+        /**
+         * Fetches data from the API with exponential backoff for retries
+         */
+        async function fetchWithBackoff(url, payload, retries = 3, delay = 1000) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        // Check for common error codes like 400, 403, 500
+                        const errorBody = await response.text();
+                        throw new Error(`HTTP error! status: ${response.status}. Body: ${errorBody.substring(0, 50)}...`);
+                    }
+
+                    const result = await response.json();
+
+                    if (result.candidates && result.candidates[0].content?.parts?.[0]?.text) {
+                        const jsonText = result.candidates[0].content.parts[0].text;
+                        return JSON.parse(jsonText);
+                    } else {
+                        throw new Error("Invalid API response structure (Missing text content)");
+                    }
+
+                } catch (error) {
+                    console.warn(`Attempt ${i + 1} failed. Retrying in ${delay}ms...`, error.message);
+                    if (i < retries - 1) {
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2; // Exponential backoff
+                    } else {
+                        throw error; // Max retries reached
+                    }
+                }
+            }
+        }
+
+
+        // --- QUIZ LOGIC ---
+
+        /**
+         * Displays the current question and options
+         */
+        function displayQuestion() {
+            if (currentQuestionIndex >= questions.length) {
+                showResults();
+                return;
+            }
+
+            const question = questions[currentQuestionIndex];
+            
+            // Update UI elements
+            questionCounter.textContent = `Question ${currentQuestionIndex + 1} of 10`;
+            currentScore.textContent = `Score: ${score}`;
+            questionText.textContent = question.question;
+            answerFeedback.textContent = ''; // Clear previous feedback
+
+            // Clear old options
+            optionsContainer.innerHTML = '';
+
+            // Shuffle options so the correct answer isn't always in the same place
+            const shuffledOptions = shuffleArray([...question.options]);
+            
+            // Create and append new option buttons (Gameshow Style)
+            shuffledOptions.forEach(option => {
+                const button = document.createElement('button');
+                button.textContent = option;
+                // Options: White text, purple background, high border contrast
+                button.className = "option-button w-full p-4 bg-purple-700 hover:bg-purple-600 rounded-xl text-lg text-left font-semibold transition-all duration-150 transform hover:scale-[1.02] border-2 border-fuchsia-400 shadow-md";
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        /**
+         * Checks the selected answer and provides visual feedback
+         * @param {HTMLElement} selectedButton - The button element that was clicked
+         */
+        function checkAnswer(selectedButton) {
+            const selectedAnswer = selectedButton.textContent;
+            const correctAnswer = questions[currentQuestionIndex].correctAnswer;
+
+            // Disable all buttons to prevent double-clicking (re-enabling is done by the next question load)
+            document.querySelectorAll('.option-button').forEach(btn => btn.disabled = true);
+
+            // Provide visual feedback
+            if (selectedAnswer === correctAnswer) {
+                score++;
+                selectedButton.classList.remove('bg-purple-700', 'hover:bg-purple-600');
+                selectedButton.classList.add('bg-green-500', 'text-white', 'border-green-300');
+                answerFeedback.textContent = "CORRECT! That's how it's done!";
+                answerFeedback.className = "text-center text-xl mt-6 min-h-[1.5rem] text-green-300 font-black";
+            } else {
+                selectedButton.classList.remove('bg-purple-700', 'hover:bg-purple-600');
+                selectedButton.classList.add('bg-red-600', 'text-white', 'border-red-300');
+                answerFeedback.textContent = `BEEP! Wrong. The correct answer was: ${correctAnswer}`;
+                answerFeedback.className = "text-center text-xl mt-6 min-h-[1.5rem] text-red-400 font-black";
+
+                // Highlight the correct answer
+                document.querySelectorAll('.option-button').forEach(btn => {
+                    if (btn.textContent === correctAnswer) {
+                        btn.classList.remove('bg-purple-700', 'hover:bg-purple-600');
+                        btn.classList.add('bg-green-500', 'text-white', 'border-green-300');
+                    }
+                });
+            }
+
+            // Move to the next question after a short delay
+            setTimeout(() => {
+                currentQuestionIndex++;
+                displayQuestion();
+            }, 2000); // 2-second delay to show feedback
+        }
+
+        /**
+         * Displays the final results screen
+         */
+        function showResults() {
+            const percentage = (score / questions.length) * 100;
+            scorePercentage.textContent = `${percentage.toFixed(0)}%`;
+
+            let feedback = '';
+            let feedbackClass = 'text-4xl font-extrabold mb-10';
+
+            if (percentage > 80) {
+                feedback = 'Excellent!';
+                // Gold Italic requirement
+                feedbackClass += ' gold-italic'; 
+            } else if (percentage >= 50) {
+                feedback = 'Good One';
+                feedbackClass += ' text-green-300';
+            } else {
+                feedback = 'Very Poor';
+                feedbackClass += ' text-red-400';
+            }
+
+            scoreFeedback.textContent = feedback;
+            scoreFeedback.className = feedbackClass;
+
+            showScreen('results-screen');
+        }
+
+        /**
+         * Resets the game state and returns to the category screen
+         */
+        function restartQuiz() {
+            questions = [];
+            currentQuestionIndex = 0;
+            score = 0;
+            showScreen('category-screen');
+        }
+
+        // --- UTILITY FUNCTIONS ---
+
+        /**
+         * Shuffles an array in place using the Fisher-Yates algorithm
+         * @param {Array} array - The array to shuffle
+         * @returns {Array} The shuffled array
+         */
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+    </script>
+</body>
+</html>
