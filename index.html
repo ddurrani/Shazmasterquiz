@@ -1,457 +1,552 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-g">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShazMaster the Ultimate Quiz</title>
-    <!-- 1. Load Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 2. Load Google Font (Inter) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <title>QuizMaster Final</title>
     <style>
-        /* 3. Define base styles for the gameshow look */
-        body {
-            font-family: 'Inter', sans-serif;
-            /* New high-energy game show gradient: Deep Blue to Pink/Magenta */
-            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #831843 100%);
-            background-attachment: fixed;
-        }
-        /* Custom class for the gold italic text (made brighter) */
-        .gold-italic {
-            color: #fcd34d; /* Tailwind 'yellow-300' */
-            font-style: italic;
+        :root {
+            --bg-deep: #1a0b2e;
+            --bg-card: #2d1b4e;
+            --accent-gold: #ffd700;
+            --accent-pink: #ff007f;
+            --accent-blue: #00f2ff;
+            --text-white: #ffffff;
+            --correct: #00e676;
+            --wrong: #ff1744;
         }
 
-        /* A simple loading spinner */
+        body {
+            font-family: 'Poppins', 'Segoe UI', sans-serif;
+            background: radial-gradient(circle at center, #2b1055, var(--bg-deep));
+            color: var(--text-white);
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* Canvas for Fireworks - High Z-Index to float over everything */
+        #fireworks-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        /* WATERMARK STYLE */
+        .watermark {
+            position: fixed;
+            bottom: 15px;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.3); /* Subtle transparent white */
+            font-size: 0.9rem;
+            font-family: 'Poppins', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            z-index: 100; /* Above background, below fireworks */
+            pointer-events: none; /* Allows clicking through it if needed */
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .container {
+            background-color: rgba(45, 27, 78, 0.95);
+            width: 90%;
+            max-width: 800px;
+            border-radius: 20px;
+            padding: 30px;
+            border: 2px solid var(--accent-blue);
+            box-shadow: 0 0 20px var(--accent-blue), 0 0 50px rgba(0,0,0,0.5);
+            text-align: center;
+            position: relative;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            margin-bottom: 30px; /* Space for watermark */
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            color: var(--accent-gold);
+            text-shadow: 0 0 10px var(--accent-gold);
+            letter-spacing: 2px;
+        }
+
+        h2 { color: var(--accent-blue); }
+
+        .screen { display: none; animation: fadeIn 0.5s ease; width: 100%; }
+        .screen.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Category Grid */
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 700px) {
+            .category-grid { grid-template-columns: repeat(2, 1fr); }
+            h1 { font-size: 2rem; }
+        }
+
+        .cat-btn {
+            background: linear-gradient(45deg, #ff007f, #760138);
+            color: white;
+            border: 2px solid var(--accent-pink);
+            padding: 15px 5px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(255, 0, 127, 0.4);
+            text-transform: uppercase;
+        }
+
+        .cat-btn:hover {
+            transform: translateY(-5px) scale(1.05);
+            background: linear-gradient(45deg, #ff4da6, #ff007f);
+            box-shadow: 0 0 20px var(--accent-pink);
+        }
+
+        /* Loading Spinner */
         .loader {
-            border: 4px solid rgba(255, 255, 255, 0.3);
+            border: 5px solid rgba(255,255,255,0.1);
+            border-top: 5px solid var(--accent-blue);
             border-radius: 50%;
-            border-top: 4px solid #f97316; /* Orange for spotlight effect */
             width: 50px;
             height: 50px;
             animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .loader.active { display: block; }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* HUD */
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            border: 1px solid var(--accent-blue);
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--accent-blue);
         }
+
+        /* Questions */
+        .question-text {
+            font-size: 1.4rem;
+            margin-bottom: 30px;
+            line-height: 1.4;
+            min-height: 80px;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        @media (max-width: 600px) { .options-grid { grid-template-columns: 1fr; } }
+
+        .option-btn {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 2px solid var(--accent-blue);
+            padding: 20px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .option-btn:hover { background: rgba(0, 242, 255, 0.2); transform: scale(1.02); }
+
+        .option-btn.correct { 
+            background-color: var(--correct); border-color: var(--correct); 
+            color: #000; font-weight: bold; box-shadow: 0 0 15px var(--correct);
+        }
+        .option-btn.wrong { 
+            background-color: var(--wrong); border-color: var(--wrong);
+            box-shadow: 0 0 15px var(--wrong);
+        }
+        
+        .disabled { pointer-events: none; opacity: 0.8; }
+
+        /* End Screen */
+        .final-score { font-size: 4rem; color: var(--accent-gold); font-weight: 800; margin: 20px 0; }
+        .final-percent { font-size: 2rem; color: var(--accent-blue); margin-bottom: 10px; }
+        .final-msg { font-size: 1.5rem; margin-bottom: 30px; font-style: italic; }
+        
+        /* Play Again Button */
+        .restart-btn {
+            background: var(--accent-gold); color: #000; font-size: 1.2rem; font-weight: bold;
+            padding: 15px 40px; border: none; border-radius: 50px; cursor: pointer;
+            box-shadow: 0 0 20px var(--accent-gold); 
+            transition: opacity 0.5s ease, transform 0.2s;
+            opacity: 0; /* Hidden initially via opacity */
+            pointer-events: none; /* Not clickable when hidden */
+        }
+        
+        .restart-btn.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .restart-btn:hover { transform: scale(1.1); box-shadow: 0 0 40px var(--accent-gold); }
     </style>
 </head>
-<body class="text-white min-h-screen flex items-center justify-center p-4">
+<body>
 
-    <!-- Main App Container - Now darker and more substantial -->
-    <div id="app-container" class="w-full max-w-3xl mx-auto bg-purple-900/50 backdrop-blur-md rounded-3xl shadow-2xl shadow-fuchsia-800/80 p-6 md:p-12 transition-all duration-300 border-4 border-fuchsia-600">
+<canvas id="fireworks-canvas"></canvas>
 
-        <!-- Screen 1: Category Selection (Default) -->
-        <div id="category-screen">
-            <!-- Title: Bright Gold/Yellow for prominence -->
-            <h1 class="text-4xl md:text-5xl font-black text-center mb-2 text-yellow-400 drop-shadow-lg">ShazMaster</h1>
-            <!-- Subtitle: High contrast text -->
-            <h2 class="text-2xl md:text-3xl font-extrabold text-center mb-8 text-purple-300">The Ultimate Quiz</h2>
-            <p class="text-center text-xl mb-8 font-semibold text-gray-200">Select your category to enter the spotlight:</p>
-            <!-- Category Grid: Now uses sm:grid-cols-3 to ensure a perfect 4x3 layout from tablet size up -->
-            <div id="category-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-5">
-                <!-- Categories -->
-                <button data-category="Sports" class="category-button">Sports</button>
-                <button data-category="Movies" class="category-button">Movies</button>
-                <button data-category="Technology" class="category-button">Technology</button>
-                <button data-category="History" class="category-button">History</button>
-                <button data-category="Science" class="category-button">Science</button>
-                <button data-category="Music" class="category-button">Music</button>
-                <button data-category="Geography" class="category-button">Geography</button>
-                <button data-category="Literature" class="category-button">Literature</button>
-                <button data-category="Art" class="category-button">Art</button>
-                <button data-category="General Knowledge" class="category-button">General Knowledge</button>
-                <button data-category="Food & Drink" class="category-button">Food & Drink</button>
-                <button data-category="Nature" class="category-button">Nature</button>
-            </div>
-        </div>
-
-        <!-- Screen 2: Loading Screen -->
-        <div id="loading-screen" class="hidden text-center p-12">
-            <div class="loader mx-auto mb-6"></div>
-            <!-- Loading text is now bolder and brighter -->
-            <h2 class="text-3xl font-bold text-yellow-400 mb-2">Generating Your Quiz...</h2>
-            <p class="text-xl">Preparing 10 high-stakes questions on <span id="loading-category" class="font-bold"></span>.</p>
-        </div>
-
-        <!-- Screen 3: Quiz Screen -->
-        <div id="quiz-screen" class="hidden">
-            <div class="flex justify-between items-center mb-4 text-xl font-bold">
-                <span id="question-counter" class="text-xl font-bold text-yellow-300">Question 1 of 10</span>
-                <span id="current-score" class="text-xl font-bold text-green-400">Score: 0</span>
-            </div>
-            <!-- Question Text - Larger and Bolder -->
-            <h2 id="question-text" class="text-3xl md:text-4xl font-extrabold mb-8 min-h-[8rem] flex items-center justify-center text-center text-white p-4 border-b-2 border-purple-500">
-                Loading question...
-            </h2>
-            <!-- Options Container -->
-            <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Option buttons will be dynamically inserted here -->
-            </div>
-            <!-- Feedback for answer -->
-            <p id="answer-feedback" class="text-center text-xl mt-6 min-h-[1.5rem] font-semibold"></p>
-        </div>
-
-        <!-- Screen 4: Results Screen -->
-        <div id="results-screen" class="hidden text-center">
-            <!-- Results Title - High Impact -->
-            <h2 class="text-4xl font-black mb-4 text-yellow-400">FINAL SCORE</h2>
-            <!-- Score Percentage - Massive Text -->
-            <h1 id="score-percentage" class="text-8xl md:text-9xl font-black text-white mb-4 drop-shadow-lg">
-                0%
-            </h1>
-            <!-- Score Feedback - Bolder -->
-            <p id="score-feedback" class="text-4xl font-extrabold mb-10">
-                <!-- "Very Poor", "Good One", or "Excellent!" -->
-            </p>
-            <!-- Restart Button - Striking Gold/Yellow -->
-            <button id="restart-button" class="w-full max-w-sm mx-auto p-5 bg-yellow-500 hover:bg-yellow-400 text-gray-900 rounded-xl text-2xl font-black transition-all duration-200 transform hover:scale-105 shadow-2xl shadow-yellow-700/50 uppercase">
-                Start Again
-            </button>
-        </div>
-
-        <!-- Screen 5: Error Screen (New) -->
-        <div id="error-screen" class="hidden text-center p-12">
-            <h2 class="text-3xl font-bold text-red-400 mb-4">API Request Failed</h2>
-            <p id="error-message" class="text-xl text-gray-200 mb-8">
-                The game could not retrieve questions from the server. This often happens if the hosting environment (like CodePen/JSFiddle) blocks the API connection.
-                Please ensure you are running the game in a properly configured environment.
-            </p>
-            <button id="error-restart-button" class="w-full max-w-sm mx-auto p-5 bg-yellow-500 hover:bg-yellow-400 text-gray-900 rounded-xl text-2xl font-black transition-all duration-200 transform hover:scale-105 shadow-2xl shadow-yellow-700/50 uppercase">
-                Back to Categories
-            </button>
-        </div>
-
+<div class="container">
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="screen">
+        <h2>Fetching Questions...</h2>
+        <div class="loader active"></div>
+        <p>Connecting to Open Trivia Database</p>
     </div>
 
-    <script type="module">
-        // --- STATE AND VARIABLES ---
+    <!-- 1. Category Selection -->
+    <div id="start-screen" class="screen active">
+        <h1>QuizMaster</h1>
+        <p style="color: #ccc;">Select a category to generate 10 random questions</p>
+        <div class="category-grid" id="category-container"></div>
+    </div>
 
-        // API Key (remains empty, as per instructions)
-        const apiKey = "";
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+    <!-- 2. Game Loop -->
+    <div id="game-screen" class="screen">
+        <div class="hud">
+            <span id="hud-progress">Q: 1/10</span>
+            <span id="hud-score">Score: 0</span>
+        </div>
+        <h2 id="question-text" class="question-text">...</h2>
+        <div class="options-grid" id="options-container"></div>
+    </div>
 
-        // Global State
-        let questions = [];
-        let currentQuestionIndex = 0;
-        let score = 0;
+    <!-- 3. Results -->
+    <div id="end-screen" class="screen">
+        <h1>Quiz Complete!</h1>
+        <p>Category: <span id="end-category" style="color:var(--accent-pink)"></span></p>
+        <div class="final-score" id="final-score">0/10</div>
+        <div class="final-percent" id="final-percent">0%</div>
+        <div class="final-msg" id="final-msg">Message</div>
+        <!-- Play Again Button (Hidden initially) -->
+        <button id="play-again-btn" class="restart-btn" onclick="location.reload()">Play Again</button>
+    </div>
+</div>
 
-        // DOM Element References
-        const categoryScreen = document.getElementById('category-screen');
-        const loadingScreen = document.getElementById('loading-screen');
-        const quizScreen = document.getElementById('quiz-screen');
-        const resultsScreen = document.getElementById('results-screen');
-        // New error screen elements
-        const errorScreen = document.getElementById('error-screen');
-        const errorMessage = document.getElementById('error-message');
-        const errorRestartButton = document.getElementById('error-restart-button');
-        
-        const categoryGrid = document.getElementById('category-grid');
-        const loadingCategory = document.getElementById('loading-category');
-        
-        const questionCounter = document.getElementById('question-counter');
-        const currentScore = document.getElementById('current-score');
-        const questionText = document.getElementById('question-text');
-        const optionsContainer = document.getElementById('options-container');
-        const answerFeedback = document.getElementById('answer-feedback');
-        
-        const scorePercentage = document.getElementById('score-percentage');
-        const scoreFeedback = document.getElementById('score-feedback');
-        const restartButton = document.getElementById('restart-button');
+<!-- WATERMARK -->
+<div class="watermark">Created by DA Durrani</div>
 
-        // --- INITIALIZATION ---
+<script>
+    // --- 1. CONFIG & API MAP ---
+    const QUESTIONS_PER_GAME = 10;
+    
+    // Mapping user category names to Open Trivia Database IDs
+    const CATEGORY_IDS = {
+        "Sports": 21,
+        "Movies": 11,
+        "Music": 12,
+        "Famous People": 26, 
+        "Famous Places": 22, 
+        "Science": 17, 
+        "Literature": 10,
+        "Technology": 18, 
+        "Animals": 27,
+        "Food": 9, 
+        "Geography": 22,
+        "Physics": 17, 
+        "Biology": 17, 
+        "History": 23,
+        "Art": 25,
+        "Video Games": 15 
+    };
 
-        // Apply shared button styles to initial categories (Gameshow Style)
-        document.querySelectorAll('.category-button').forEach(button => {
-            // Updated padding to be consistent (p-5) across all screens for better vertical fit
-            button.classList.add(
-                'w-full', 'p-5', // Uniform padding for equal vertical size
-                'bg-fuchsia-600', 'hover:bg-yellow-500', // Deep Magenta base, Gold hover
-                'hover:text-gray-900', // Text contrast on hover
-                'text-white', 'text-2xl', 
-                'rounded-xl', 'font-black', 'uppercase', 
-                'transition-all', 'duration-200', 'transform', 
-                'hover:scale-105', 'shadow-2xl', 'shadow-fuchsia-800/50', 'text-center'
-            );
-        });
+    // --- 2. AUDIO ENGINE ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        // --- EVENT LISTENERS ---
+    function playSound(type) {
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
 
-        // Listen for clicks on the category grid
-        categoryGrid.addEventListener('click', (e) => {
-            if (e.target.matches('.category-button')) {
-                const category = e.target.dataset.category;
-                startQuiz(category);
-            }
-        });
-
-        // Listen for clicks on the option buttons
-        optionsContainer.addEventListener('click', (e) => {
-            if (e.target.matches('.option-button')) {
-                // Disable all buttons to prevent double-clicking
-                document.querySelectorAll('.option-button').forEach(btn => btn.disabled = true);
-                checkAnswer(e.target);
-            }
-        });
-
-        // Listen for click on the restart button
-        restartButton.addEventListener('click', restartQuiz);
-        
-        // Listen for click on the error restart button
-        errorRestartButton.addEventListener('click', restartQuiz);
-
-
-        // --- STATE MANAGEMENT ---
-
-        /**
-         * Hides all screens and shows the one with the specified ID
-         * @param {string} screenId - The ID of the screen to show ('category-screen', 'loading-screen', etc.)
-         */
-        function showScreen(screenId) {
-            // Added errorScreen to the list of screens to hide
-            [categoryScreen, loadingScreen, quizScreen, resultsScreen, errorScreen].forEach(screen => {
-                screen.classList.add('hidden');
-            });
-            document.getElementById(screenId).classList.remove('hidden');
-        }
-
-
-        // --- CORE API LOGIC ---
-
-        /**
-         * Starts the quiz by fetching questions from the API
-         * @param {string} category - The selected quiz category
-         */
-        async function startQuiz(category) {
-            showScreen('loading-screen');
-            loadingCategory.textContent = category;
+        if (type === 'bell') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, now);
+            osc.frequency.exponentialRampToValueAtTime(440, now + 0.5);
+            gainNode.gain.setValueAtTime(0.5, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 1);
+            osc.start(now);
+            osc.stop(now + 1);
+        } else if (type === 'trumpet') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(300, now); 
+            osc.frequency.linearRampToValueAtTime(100, now + 0.4);
+            gainNode.gain.setValueAtTime(0.3, now);
+            gainNode.gain.linearRampToValueAtTime(0.01, now + 0.4);
+            osc.start(now);
+            osc.stop(now + 0.4);
             
-            // Define the structure we want the API to return
-            const responseSchema = {
-                type: "ARRAY",
-                items: {
-                    type: "OBJECT",
-                    properties: {
-                        "question": { "type": "STRING" },
-                        "options": {
-                            "type": "ARRAY",
-                            "items": { "type": "STRING" },
-                            "minItems": 4,
-                            "maxItems": 4
-                        },
-                        "correctAnswer": { "type": "STRING" }
-                    },
-                    required: ["question", "options", "correctAnswer"]
-                }
-            };
-            
-            const systemPrompt = "You are 'ShazMaster', a witty and challenging quiz master. Generate 10 multiple-choice questions for the given category. Each question must have exactly 4 options, and one of those options must be the correct answer. Ensure the 'correctAnswer' string is an exact match to one of the strings in the 'options' array.";
-            const userQuery = `Category: ${category}`;
-
-            const payload = {
-                contents: [{ parts: [{ text: userQuery }] }],
-                systemInstruction: {
-                    parts: [{ text: systemPrompt }]
-                },
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: responseSchema,
-                }
-            };
-
-            try {
-                const fetchedQuestions = await fetchWithBackoff(apiUrl, payload);
-                if (fetchedQuestions && fetchedQuestions.length > 0) {
-                    questions = fetchedQuestions;
-                    currentQuestionIndex = 0;
-                    score = 0;
-                    displayQuestion();
-                    showScreen('quiz-screen');
-                } else {
-                    // Handle case where API returns empty or invalid data
-                    console.error("Failed to fetch valid questions (empty response).");
-                    errorMessage.textContent = `The API returned an empty or invalid quiz. Please try a different category or wait a moment. (Code: Empty Response)`;
-                    showScreen('error-screen');
-                }
-            } catch (error) {
-                // Show the new error screen on failure
-                console.error("Error fetching questions:", error);
-                errorMessage.textContent = `Error: ${error.message}. This is likely a network or hosting security issue. Please try running the game on a standard web server (like http://localhost:8000).`;
-                showScreen('error-screen');
-            }
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            osc2.type = 'sawtooth';
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+            osc2.frequency.setValueAtTime(280, now + 0.4);
+            osc2.frequency.linearRampToValueAtTime(80, now + 0.9);
+            gain2.gain.setValueAtTime(0.3, now + 0.4);
+            gain2.gain.linearRampToValueAtTime(0.01, now + 0.9);
+            osc2.start(now + 0.4);
+            osc2.stop(now + 0.9);
+        } else if (type === 'pop') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(100, now);
+            osc.frequency.exponentialRampToValueAtTime(0.01, now + 0.1);
+            gainNode.gain.setValueAtTime(0.2, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            osc.start(now);
+            osc.stop(now + 0.1);
         }
+    }
 
-        /**
-         * Fetches data from the API with exponential backoff for retries
-         */
-        async function fetchWithBackoff(url, payload, retries = 3, delay = 1000) {
-            for (let i = 0; i < retries; i++) {
-                try {
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
+    // --- 3. FIREWORKS ENGINE ---
+    const canvas = document.getElementById('fireworks-canvas');
+    const ctx = canvas.getContext('2d');
+    let fireworks = [];
+    let fireworkLoopId;
 
-                    if (!response.ok) {
-                        // Check for common error codes like 400, 403, 500
-                        const errorBody = await response.text();
-                        throw new Error(`HTTP error! status: ${response.status}. Body: ${errorBody.substring(0, 50)}...`);
-                    }
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-                    const result = await response.json();
-
-                    if (result.candidates && result.candidates[0].content?.parts?.[0]?.text) {
-                        const jsonText = result.candidates[0].content.parts[0].text;
-                        return JSON.parse(jsonText);
-                    } else {
-                        throw new Error("Invalid API response structure (Missing text content)");
-                    }
-
-                } catch (error) {
-                    console.warn(`Attempt ${i + 1} failed. Retrying in ${delay}ms...`, error.message);
-                    if (i < retries - 1) {
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        delay *= 2; // Exponential backoff
-                    } else {
-                        throw error; // Max retries reached
-                    }
-                }
-            }
+    class Particle {
+        constructor(x, y, color) {
+            this.x = x;
+            this.y = y;
+            this.color = color;
+            this.velocity = { x: (Math.random() - 0.5) * 8, y: (Math.random() - 0.5) * 8 };
+            this.alpha = 1;
+            this.friction = 0.95;
         }
+        draw() {
+            ctx.globalAlpha = this.alpha;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 3, 0, Math.PI * 2, false);
+            ctx.fillStyle = this.color;
+            ctx.fill();
+        }
+        update() {
+            this.velocity.x *= this.friction;
+            this.velocity.y *= this.friction;
+            this.x += this.velocity.x;
+            this.y += this.velocity.y;
+            this.alpha -= 0.01;
+        }
+    }
 
+    function createFirework() {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * (canvas.height / 2);
+        const color = `hsl(${Math.random() * 360}, 50%, 50%)`;
+        playSound('pop');
+        for (let i = 0; i < 30; i++) fireworks.push(new Particle(x, y, color));
+    }
 
-        // --- QUIZ LOGIC ---
+    function animateFireworks() {
+        fireworkLoopId = requestAnimationFrame(animateFireworks);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        fireworks.forEach((p, i) => {
+            if (p.alpha > 0) { p.update(); p.draw(); } else fireworks.splice(i, 1);
+        });
+        if (Math.random() < 0.05) createFirework();
+    }
 
-        /**
-         * Displays the current question and options
-         */
-        function displayQuestion() {
-            if (currentQuestionIndex >= questions.length) {
-                showResults();
+    function stopFireworks() {
+        cancelAnimationFrame(fireworkLoopId);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        fireworks = [];
+    }
+
+    // --- 4. GAME LOGIC ---
+    let currentCategory = "";
+    let currentQuestions = [];
+    let questionIndex = 0;
+    let score = 0;
+
+    const startScreen = document.getElementById('start-screen');
+    const loadingScreen = document.getElementById('loading-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const endScreen = document.getElementById('end-screen');
+    const categoryContainer = document.getElementById('category-container');
+    const questionText = document.getElementById('question-text');
+    const optionsContainer = document.getElementById('options-container');
+    const hudProgress = document.getElementById('hud-progress');
+    const hudScore = document.getElementById('hud-score');
+    const playAgainBtn = document.getElementById('play-again-btn');
+
+    function decodeHTML(html) {
+        const txt = document.createElement('textarea');
+        txt.innerHTML = html;
+        return txt.value;
+    }
+
+    Object.keys(CATEGORY_IDS).forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = 'cat-btn';
+        btn.textContent = cat;
+        btn.onclick = () => startAPIGame(cat, CATEGORY_IDS[cat]);
+        categoryContainer.appendChild(btn);
+    });
+
+    async function startAPIGame(catName, catID) {
+        currentCategory = catName;
+        startScreen.classList.remove('active');
+        loadingScreen.classList.add('active');
+
+        try {
+            const url = `https://opentdb.com/api.php?amount=10&category=${catID}&type=multiple`;
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.response_code !== 0) {
+                alert("Not enough questions found for this category. Try another.");
+                loadingScreen.classList.remove('active');
+                startScreen.classList.add('active');
                 return;
             }
 
-            const question = questions[currentQuestionIndex];
-            
-            // Update UI elements
-            questionCounter.textContent = `Question ${currentQuestionIndex + 1} of 10`;
-            currentScore.textContent = `Score: ${score}`;
-            questionText.textContent = question.question;
-            answerFeedback.textContent = ''; // Clear previous feedback
+            currentQuestions = data.results.map(q => {
+                return {
+                    q: decodeHTML(q.question),
+                    answer: decodeHTML(q.correct_answer),
+                    options: [...q.incorrect_answers.map(decodeHTML), decodeHTML(q.correct_answer)]
+                };
+            });
 
-            // Clear old options
-            optionsContainer.innerHTML = '';
+            questionIndex = 0;
+            score = 0;
+            loadingScreen.classList.remove('active');
+            gameScreen.classList.add('active');
+            stopFireworks();
+            loadQuestion();
 
-            // Shuffle options so the correct answer isn't always in the same place
-            const shuffledOptions = shuffleArray([...question.options]);
-            
-            // Create and append new option buttons (Gameshow Style)
-            shuffledOptions.forEach(option => {
-                const button = document.createElement('button');
-                button.textContent = option;
-                // Options: White text, purple background, high border contrast
-                button.className = "option-button w-full p-4 bg-purple-700 hover:bg-purple-600 rounded-xl text-lg text-left font-semibold transition-all duration-150 transform hover:scale-[1.02] border-2 border-fuchsia-400 shadow-md";
-                optionsContainer.appendChild(button);
+        } catch (error) {
+            console.error(error);
+            alert("Error connecting to the Quiz API. Check internet connection.");
+            loadingScreen.classList.remove('active');
+            startScreen.classList.add('active');
+        }
+    }
+
+    function loadQuestion() {
+        if (questionIndex >= currentQuestions.length) {
+            endGame();
+            return;
+        }
+
+        const qData = currentQuestions[questionIndex];
+        hudProgress.textContent = `Q: ${questionIndex + 1}/${QUESTIONS_PER_GAME}`;
+        hudScore.textContent = `Score: ${score}`;
+        questionText.textContent = qData.q;
+        optionsContainer.innerHTML = '';
+
+        const shuffledOptions = [...qData.options].sort(() => 0.5 - Math.random());
+
+        shuffledOptions.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = opt;
+            btn.onclick = () => checkAnswer(btn, opt, qData.answer);
+            optionsContainer.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(btn, selected, correct) {
+        const allBtns = optionsContainer.querySelectorAll('button');
+        allBtns.forEach(b => b.classList.add('disabled'));
+
+        if (selected === correct) {
+            btn.classList.add('correct');
+            playSound('bell');
+            score++;
+        } else {
+            btn.classList.add('wrong');
+            playSound('trumpet');
+            allBtns.forEach(b => {
+                if (b.textContent === correct) b.classList.add('correct');
             });
         }
+        hudScore.textContent = `Score: ${score}`;
 
-        /**
-         * Checks the selected answer and provides visual feedback
-         * @param {HTMLElement} selectedButton - The button element that was clicked
-         */
-        function checkAnswer(selectedButton) {
-            const selectedAnswer = selectedButton.textContent;
-            const correctAnswer = questions[currentQuestionIndex].correctAnswer;
+        setTimeout(() => {
+            questionIndex++;
+            loadQuestion();
+        }, 2000); 
+    }
 
-            // Disable all buttons to prevent double-clicking (re-enabling is done by the next question load)
-            document.querySelectorAll('.option-button').forEach(btn => btn.disabled = true);
-
-            // Provide visual feedback
-            if (selectedAnswer === correctAnswer) {
-                score++;
-                selectedButton.classList.remove('bg-purple-700', 'hover:bg-purple-600');
-                selectedButton.classList.add('bg-green-500', 'text-white', 'border-green-300');
-                answerFeedback.textContent = "CORRECT! That's how it's done!";
-                answerFeedback.className = "text-center text-xl mt-6 min-h-[1.5rem] text-green-300 font-black";
-            } else {
-                selectedButton.classList.remove('bg-purple-700', 'hover:bg-purple-600');
-                selectedButton.classList.add('bg-red-600', 'text-white', 'border-red-300');
-                answerFeedback.textContent = `BEEP! Wrong. The correct answer was: ${correctAnswer}`;
-                answerFeedback.className = "text-center text-xl mt-6 min-h-[1.5rem] text-red-400 font-black";
-
-                // Highlight the correct answer
-                document.querySelectorAll('.option-button').forEach(btn => {
-                    if (btn.textContent === correctAnswer) {
-                        btn.classList.remove('bg-purple-700', 'hover:bg-purple-600');
-                        btn.classList.add('bg-green-500', 'text-white', 'border-green-300');
-                    }
-                });
-            }
-
-            // Move to the next question after a short delay
+    function endGame() {
+        gameScreen.classList.remove('active');
+        endScreen.classList.add('active');
+        
+        // Reset Button Visibility
+        playAgainBtn.classList.remove('visible');
+        
+        document.getElementById('end-category').textContent = currentCategory;
+        document.getElementById('final-score').textContent = `${score}/${QUESTIONS_PER_GAME}`;
+        
+        const percentage = (score / QUESTIONS_PER_GAME) * 100;
+        document.getElementById('final-percent').textContent = `${Math.round(percentage)}%`;
+        const msgElement = document.getElementById('final-msg');
+        
+        if (percentage < 50) {
+            msgElement.textContent = "Better luck next time";
+            msgElement.style.color = "#ccc";
+            playAgainBtn.classList.add('visible'); // Show button immediately for low score
+        } 
+        else if (percentage >= 50 && percentage < 80) {
+            msgElement.textContent = "Not bad!";
+            msgElement.style.color = "var(--accent-blue)";
+            playAgainBtn.classList.add('visible'); // Show button immediately for mid score
+        } 
+        else {
+            msgElement.textContent = "You are a Quizmaster";
+            msgElement.style.color = "var(--accent-gold)";
+            
+            // --- FIREWORKS LOGIC ---
+            animateFireworks();
+            
+            // Run fireworks for 5 seconds, then stop and show button
             setTimeout(() => {
-                currentQuestionIndex++;
-                displayQuestion();
-            }, 2000); // 2-second delay to show feedback
+                stopFireworks();
+                playAgainBtn.classList.add('visible');
+            }, 5000);
         }
+    }
+</script>
 
-        /**
-         * Displays the final results screen
-         */
-        function showResults() {
-            const percentage = (score / questions.length) * 100;
-            scorePercentage.textContent = `${percentage.toFixed(0)}%`;
-
-            let feedback = '';
-            let feedbackClass = 'text-4xl font-extrabold mb-10';
-
-            if (percentage > 80) {
-                feedback = 'Excellent!';
-                // Gold Italic requirement
-                feedbackClass += ' gold-italic'; 
-            } else if (percentage >= 50) {
-                feedback = 'Good One';
-                feedbackClass += ' text-green-300';
-            } else {
-                feedback = 'Very Poor';
-                feedbackClass += ' text-red-400';
-            }
-
-            scoreFeedback.textContent = feedback;
-            scoreFeedback.className = feedbackClass;
-
-            showScreen('results-screen');
-        }
-
-        /**
-         * Resets the game state and returns to the category screen
-         */
-        function restartQuiz() {
-            questions = [];
-            currentQuestionIndex = 0;
-            score = 0;
-            showScreen('category-screen');
-        }
-
-        // --- UTILITY FUNCTIONS ---
-
-        /**
-         * Shuffles an array in place using the Fisher-Yates algorithm
-         * @param {Array} array - The array to shuffle
-         * @returns {Array} The shuffled array
-         */
-        function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-            return array;
-        }
-
-    </script>
 </body>
 </html>
